@@ -1,5 +1,5 @@
-# radbas Container
-
+# Container.cr
+Simple IoC Container.
 
 ## Installation
 
@@ -7,7 +7,7 @@
 
    ```yaml
    dependencies:
-     container:
+     radbas-container:
        github: radbas/container
    ```
 
@@ -16,7 +16,7 @@
 ## Usage
 
 ```crystal
-require "radbas/container"
+require "radbas-container"
 ```
 
 ## Contributing
