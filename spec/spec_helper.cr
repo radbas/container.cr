@@ -1,2 +1,5 @@
 require "spec"
-require "../src/container"
+require "../src/radbas-container"
+
+class Container < Radbas::Container
+end
