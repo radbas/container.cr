@@ -127,7 +127,7 @@ abstract class Radbas::Container
                 {% get_name = "_#{arg[:id].name.gsub(/[^\w]/, "_").id}" %}
                 {{arg[:name].id}} = {{get_name.id}},
               {% else %}
-                {{arg[:name].id}} = {{arg[:value].id}},
+                {{arg[:name].id}} = {{arg[:value]}},
               {% end %}
             {% end %}
           }
