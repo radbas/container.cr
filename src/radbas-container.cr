@@ -75,7 +75,7 @@ abstract class Radbas::Container
             {% unless ENTRIES[resolved_dep] %}
               {% if new_arg[:value].nil? %}
                 {% raise "[container:build] #{entry} uses #{resolved_dep} which is not registered and autowire is off" unless CONFIG[:autowire] %}
-                {% raise "[container:build] autowired #{resolved_dep} of #{entry} must not be an interface" if resolved_dep.abstract? %}
+                {% raise "[container:build] autowired #{resolved_dep} of #{entry} must not be abstract" if resolved_dep.abstract? %}
                 {% ENTRIES[resolved_dep] = {args: nil, factory: nil, public: false} %}
               {% else %}
                 {% new_arg[:id] = nil %}
@@ -98,11 +98,11 @@ abstract class Radbas::Container
                 {% raise "[container:build] #{entry} uses implementation #{resolved_impl} which is not registered and autowire is off" unless CONFIG[:autowire] %}
                 {% ENTRIES[resolved_impl] = {params: nil, factory: nil, public: false} %}
               {% end %}
-              {% factory = "_#{resolved_impl.name.split("::").join("_").id}" %}
+              {% factory = "_#{resolved_impl.name.gsub(/[^\w]/, "_").id}" %}
             {% end %}
       {% end %}
 
-      {% entry_name = "_#{entry.name.split("::").join("_").id}" %}
+      {% entry_name = "_#{entry.name.gsub(/[^\w]/, "_").id}" %}
 
       @{{entry_name.id}}_resolving = false
       private getter {{entry_name.id}} : {{entry.id}} {
@@ -120,7 +120,7 @@ abstract class Radbas::Container
           init_params = {
             {% for arg in new_args %}
               {% if arg[:id] %}
-                {% get_name = "_#{arg[:id].name.split("::").join("_").id}" %}
+                {% get_name = "_#{arg[:id].name.gsub(/[^\w]/, "_").id}" %}
                 {{arg[:name].id}} = {{get_name.id}},
               {% else %}
                 {{arg[:name].id}} = {{arg[:value].id}},
