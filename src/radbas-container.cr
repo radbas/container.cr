@@ -4,6 +4,10 @@ abstract class Radbas::Container
   private CONFIG  = {autowire: false}
   private ENTRIES = {} of Nil => Nil
 
+  def get(id : Container.class) : Container
+    self
+  end
+
   # set autowire flag
   private macro autowire(flag = true)
     {% CONFIG[:autowire] = flag %}
