@@ -8,12 +8,14 @@ abstract class Radbas::Container
     self
   end
 
-  # register autowire namespace
-  private macro autowire(namespace)
-    {% raise "[container:autowire] #{namespace} is not a valid path" unless namespace.is_a?(Path) %}
-    {% resolved_namespace = namespace.resolve? %}
-    {% raise "[container:autowire] #{namespace} could not be resolved, did you require it?" unless resolved_namespace %}
-    {% AUTOWIRE << resolved_namespace.name.stringify %}
+  # register autowire namespaces
+  private macro autowire(*namespaces)
+    {% for ns in namespaces %}
+      {% raise "[container:autowire] #{ns} is not a valid path" unless ns.is_a?(Path) %}
+      {% resolved_namespace = ns.resolve? %}
+      {% raise "[container:autowire] #{ns} could not be resolved, did you require it?" unless resolved_namespace %}
+      {% AUTOWIRE << resolved_namespace.name.stringify %}
+    {% end %}
   end
 
   # register a container entry
