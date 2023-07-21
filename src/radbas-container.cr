@@ -99,7 +99,7 @@ abstract class Radbas::Container
         @{{entry_name.id}}_resolving = true
         {% if factory %}
           {% if factory.is_a?(ProcLiteral) %}
-            {{factory.id}}.call(self)
+            {{factory.id}}.call
           {% else %}
             {{factory.id}}
           {% end %}
