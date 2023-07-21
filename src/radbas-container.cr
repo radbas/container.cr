@@ -1,16 +1,19 @@
 abstract class Radbas::Container
-  VERSION = "0.1.0"
+  VERSION = "0.2.0"
 
-  private CONFIG  = {autowire: false}
-  private ENTRIES = {} of Nil => Nil
+  private AUTOWIRE = [] of Nil
+  private ENTRIES  = {} of Nil => Nil
 
   def get(id : Container.class) : Container
     self
   end
 
-  # set autowire flag
-  private macro autowire(flag = true)
-    {% CONFIG[:autowire] = flag %}
+  # register autowire namespace
+  private macro autowire(namespace)
+    {% raise "[container:autowire] #{namespace} is not a valid path" unless namespace.is_a?(Path) %}
+    {% resolved_namespace = namespace.resolve? %}
+    {% raise "[container:autowire] #{namespace} could not be resolved, did you require it?" unless resolved_namespace %}
+    {% AUTOWIRE << resolved_namespace.name.stringify %}
   end
 
   # register a container entry
@@ -60,15 +63,9 @@ abstract class Radbas::Container
               value: arg.default_value,
             }
           %}
-          {% config_arg = params ? params[arg.name] : nil %}
-          {% unless config_arg.nil? %}
-            {% if config_arg.is_a?(Call) %}
-              {% raise "[container:build] param #{arg.name} of #{entry} uses a non valid call, use get" unless config_arg.name == "get" && config_arg.receiver.nil? %}
-              {% new_arg[:id] = config_arg.args[0] %}
-            {% else %}
-              {% new_arg[:id] = nil %}
-              {% new_arg[:value] = config_arg %}
-            {% end %}
+          {% unless (config_arg = params ? params[arg.name] : nil).nil? %}
+            {% new_arg[:id] = nil %}
+            {% new_arg[:value] = config_arg %}
           {% end %}
 
           {% if new_arg[:id] %}
@@ -78,8 +75,9 @@ abstract class Radbas::Container
             {% new_arg[:id] = resolved_dep %}
             {% unless ENTRIES[resolved_dep] %}
               {% if new_arg[:value].nil? %}
-                {% raise "[container:build] #{entry} uses #{resolved_dep} which is not registered and autowire is off" unless CONFIG[:autowire] %}
                 {% raise "[container:build] autowired #{resolved_dep} of #{entry} must not be abstract" if resolved_dep.abstract? %}
+                {% autowire = AUTOWIRE.any? { |a| resolved_dep.name.starts_with?(a) } %}
+                {% raise "[container:build] #{entry} uses #{resolved_dep} which is neither registered nor in autowire path" unless autowire %}
                 {% ENTRIES[resolved_dep] = {args: nil, factory: nil, public: false} %}
               {% else %}
                 {% new_arg[:id] = nil %}
@@ -91,19 +89,6 @@ abstract class Radbas::Container
 
           {% new_args << new_arg %}
         {% end %}
-
-      {% else %}
-            {% if factory.is_a?(Call) && factory.name == "get" && factory.receiver.nil? %}
-              {% raise "[container:build] implementation #{factory.args[0]} of #{entry} is not a valid path" unless factory.args[0].is_a?(Path) %}
-              {% resolved_impl = factory.args[0].resolve? %}
-              {% raise "[container:build] implementation #{factory.args[0]} of #{entry} could not be resolved, did you require it?" unless resolved_impl %}
-              {% raise "[container:build] #{resolved_impl} does not implement #{entry}" unless entry.all_subclasses.includes?(resolved_impl) %}
-              {% unless ENTRIES[resolved_impl] %}
-                {% raise "[container:build] #{entry} uses implementation #{resolved_impl} which is not registered and autowire is off" unless CONFIG[:autowire] %}
-                {% ENTRIES[resolved_impl] = {params: nil, factory: nil, public: false} %}
-              {% end %}
-              {% factory = "_#{resolved_impl.name.gsub(/[^\w]/, "_").id}" %}
-            {% end %}
       {% end %}
 
       {% entry_name = "_#{entry.name.gsub(/[^\w]/, "_").id}" %}
@@ -143,6 +128,7 @@ abstract class Radbas::Container
       end
 
     {% end %}
+    {% AUTOWIRE.clear %}
     {% ENTRIES.clear %}
   end
 end
