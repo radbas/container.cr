@@ -8,7 +8,7 @@ Simple IoC Container.
    ```yaml
    dependencies:
      radbas-container:
-       github: radbas/container
+       github: radbas/container.cr
    ```
 
 2. Run `shards install`
