@@ -1,5 +1,6 @@
 # Container.cr
-Simple IoC Container.
+
+Simple and small DI Container.
 
 ## Installation
 
@@ -15,8 +16,52 @@ Simple IoC Container.
 
 ## Usage
 
+Extend the abstract `Radbas::Container` class and register/autowire your services:
+
 ```crystal
 require "radbas-container"
+
+class MyService
+  def initialize(
+    @dep: DependencyService
+  ); end
+end
+
+class MyContainer < Radbas::Container
+
+  # autowire does let you register namespaces
+  # from which classes get resolved automatically
+  autowire(MyApp, CustomNamespace)
+
+  # softmap registers all subclasses of a given abstract class
+  softmap(MyAbstractClass, params: {}, public: false)
+
+  # register a single service
+  register(DependencyService)
+
+  # a factory can be used for setup
+  register(MyService, factory: ->{
+
+    # you can call get inside a factory to resolve dependencies
+    MyService.new(get(DependencyService))
+  }, public: true)
+
+   # params can be used to configure constructor params
+  register(MyService, params: { dep: get(DependencyService) })
+end
+```
+
+By default, all registered services are `private`. Normally you would register a single class as a `public` entrypoint and call `get` on the container:
+
+```crystal
+class MyContainer < Radbas::Container
+  register(MyApplication, public: true)
+end
+
+container = MyContainer.new
+app = container.get(MyApplication)
+app.run
+# ...
 ```
 
 ## Contributing
