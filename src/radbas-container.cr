@@ -1,5 +1,9 @@
 abstract class Radbas::Container
-  VERSION = "0.2.0"
+  VERSION = "0.3.0"
+
+  class CircularReferenceException < ::RuntimeError; end
+
+  class SubClassAccessException < ::RuntimeError; end
 
   private AUTOWIRE = [] of Nil
   private ENTRIES  = {} of Nil => Nil
@@ -36,8 +40,8 @@ abstract class Radbas::Container
     {% raise "[container:softmap] #{parent} could not be resolved, did you require it?" unless resolved_parent %}
     {% raise "[container:softmap] #{resolved_parent} must be abstract" unless resolved_parent.abstract? %}
     {% raise "[container:softmap] params for #{resolved_parent} must be a named Tuple" if !params.nil? && !params.is_a?(NamedTupleLiteral) %}
-    {% for cl in resolved_parent.all_subclasses.select { |c| c.class? && !c.abstract? } %}
-      {% ENTRIES[cl] = {params: params, factory: nil, public: public} unless ENTRIES[cl] %}
+    {% for entry in resolved_parent.all_subclasses.select { |cls| cls.class? && !cls.abstract? } %}
+      {% ENTRIES[entry] = {params: params, factory: nil, public: public} unless ENTRIES[entry] %}
     {% end %}
   end
 
@@ -78,7 +82,7 @@ abstract class Radbas::Container
             {% unless ENTRIES[resolved_dep] %}
               {% if new_arg[:value].nil? %}
                 {% raise "[container:build] autowired #{resolved_dep} of #{entry} must not be abstract" if resolved_dep.abstract? %}
-                {% autowire = AUTOWIRE.any? { |a| resolved_dep.name.starts_with?(a) } %}
+                {% autowire = AUTOWIRE.any? { |name| resolved_dep.name.starts_with?(name) } %}
                 {% raise "[container:build] #{entry} uses #{resolved_dep} which is neither registered nor in autowire path" unless autowire %}
                 {% ENTRIES[resolved_dep] = {args: nil, factory: nil, public: false} %}
               {% else %}
@@ -97,7 +101,7 @@ abstract class Radbas::Container
 
       @{{entry_name.id}}_resolving = false
       private getter {{entry_name.id}} : {{entry.id}} {
-        raise "[container:get] circular reference detected for {{entry.id}}" if @{{entry_name.id}}_resolving
+        raise CircularReferenceException.new "[container:get] circular reference detected for {{entry.id}}" if @{{entry_name.id}}_resolving
         @{{entry_name.id}}_resolving = true
         {% if factory %}
           {% if factory.is_a?(ProcLiteral) %}
@@ -125,7 +129,7 @@ abstract class Radbas::Container
       }
 
       {% unless public %} protected {% end %} def get(id : {{entry.id}}.class) : {{entry.id}}
-        raise "[container:get] trying to get {{entry.id}} with subclass #{id}, did you forget to register it?" unless id == {{entry.id}}
+        raise SubClassAccessException.new "[container:get] trying to get {{entry.id}} with subclass #{id}, did you forget to register it?" unless id == {{entry.id}}
         {{entry_name.id}}
       end
 
