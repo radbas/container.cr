@@ -101,31 +101,34 @@ abstract class Radbas::Container
 
       @{{entry_name.id}}_resolving = false
       private getter {{entry_name.id}} : {{entry.id}} {
-        raise CircularReferenceException.new "[container:get] circular reference detected for {{entry.id}}" if @{{entry_name.id}}_resolving
-        @{{entry_name.id}}_resolving = true
-        {% if factory %}
-          {% if factory.is_a?(ProcLiteral) %}
-            {{factory.id}}.call
-          {% else %}
-            {{factory.id}}
-          {% end %}
-        {% elsif new_args.empty? %}
-          {{entry.id}}.new
-        {% else %}
-          init_params = {
-            {% for arg in new_args %}
-              {% if arg[:id] %}
-                {% get_name = "_#{arg[:id].name.gsub(/[^\w]/, "_").id}" %}
-                {{arg[:name].id}} = {{get_name.id}},
-              {% else %}
-                {{arg[:name].id}} = {{arg[:value]}},
-              {% end %}
+        begin
+          raise CircularReferenceException.new "[container:get] circular reference detected for {{entry.id}}" if @{{entry_name.id}}_resolving
+          @{{entry_name.id}}_resolving = true
+          {% if factory %}
+            {% if factory.is_a?(ProcLiteral) %}
+              entry = {{factory.id}}.call
+            {% else %}
+              entry = {{factory.id}}
             {% end %}
-          }
-          entry = {{entry.id}}.new(*init_params)
+          {% elsif new_args.empty? %}
+            entry = {{entry.id}}.new
+          {% else %}
+            init_params = {
+              {% for arg in new_args %}
+                {% if arg[:id] %}
+                  {% get_name = "_#{arg[:id].name.gsub(/[^\w]/, "_").id}" %}
+                  {{arg[:name].id}} = {{get_name.id}},
+                {% else %}
+                  {{arg[:name].id}} = {{arg[:value]}},
+                {% end %}
+              {% end %}
+            }
+            entry = {{entry.id}}.new(*init_params)
+          {% end %}
+        ensure
           @{{entry_name.id}}_resolving = false
-          entry
-        {% end %}
+        end
+        entry
       }
 
       {% unless public %} protected {% end %} def get(id : {{entry.id}}.class) : {{entry.id}}
