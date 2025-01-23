@@ -1,5 +1,5 @@
 abstract class Radbas::Container
-  VERSION = "0.3.0"
+  VERSION = "0.3.1"
 
   class CircularReferenceException < ::RuntimeError; end
 
